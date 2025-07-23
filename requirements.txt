@@ -1,0 +1,7 @@
+discord.py
+openmeteo-requests
+pytz
+numpy
+requests-cache # Needed for caching in WeatherService
+retry-requests # Needed for retries in WeatherService
+python-dotenv # For loading environment variables from .env during local development
