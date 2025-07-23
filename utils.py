@@ -1,4 +1,4 @@
-# your_bot_project/utils.py
+# weatherbot/utils.py
 import datetime
 import logging
 import pytz # For timezone conversions

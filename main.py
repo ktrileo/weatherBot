@@ -86,7 +86,13 @@ async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
 
-    logger.info(f"Message from {message.author} in #{message.channel.name} (Guild: {message.guild.name if message.guild else 'DM'}): {message.content}")
+    # Determine channel name for logging based on channel type
+    channel_name_for_log = message.channel.name if isinstance(message.channel, discord.TextChannel) else "DM"
+    guild_name_for_log = message.guild.name if message.guild else "DM"
+
+    logger.info(f"Message from {message.author} in #{channel_name_for_log} (Guild: {guild_name_for_log}): {message.content}")
+
+    #logger.info(f"Message from {message.author} in #{message.channel.name} (Guild: {message.guild.name if message.guild else 'DM'}): {message.content}")
 
     # Process commands defined with @bot.command() decorators
     # This line is vital if you define on_message and use commands.Bot
@@ -150,7 +156,13 @@ async def get_weather(ctx: commands.Context):
 
         # Send the message to the command channel
         await ctx.send(weather_output)
-        logger.info(f"Weather forecast sent to channel: {ctx.channel.name} (ID: {ctx.channel.id})")
+        # Determine channel name for logging based on channel type
+        ctx_channel_name_for_log = ctx.channel.name if isinstance(ctx.channel, discord.TextChannel) else "DM"
+        logger.info(f"Weather forecast sent to channel: {ctx_channel_name_for_log} (ID: {ctx.channel.id})")
+        
+        # Send the message to the command channel
+        #await ctx.send(weather_output)
+        #logger.info(f"Weather forecast sent to channel: {ctx.channel.name} (ID: {ctx.channel.id})")
 
     except Exception as e:
         logger.exception(f"An error occurred while fetching or processing weather data for '{ctx.author}':")

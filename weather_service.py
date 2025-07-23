@@ -1,4 +1,4 @@
-# your_bot_project/weather_service.py
+# weatherbot/weather_service.py
 import logging
 
 import openmeteo_requests
