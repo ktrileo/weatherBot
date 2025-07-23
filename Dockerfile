@@ -4,7 +4,7 @@
 # Use an official Python runtime as a parent image.
 # We choose a specific version (e.g., 3.9-slim-buster or 3.10-slim-bullseye)
 # for stability and smaller image size. 'slim' images are highly recommended for production.
-FROM python:3.9-slim-buster as builder
+FROM python:3.13-slim-bullseye as builder
 
 # Set the working directory in the container
 WORKDIR /app
@@ -32,13 +32,13 @@ RUN pip install --upgrade pip && \
 # Use a fresh, smaller base image for the final runtime to keep the image lean.
 # This is a multi-stage build, so only the necessary artifacts (installed packages)
 # from the 'builder' stage are copied.
-FROM python:3.9-slim-buster
+FROM python:3.13-slim-bullseye
 
 # Set the working directory in the container
 WORKDIR /app
 
 # Copy installed Python packages from the builder stage
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
 # Copy the rest of your application code into the container
 # The '.' means copy everything from the current directory (your_bot_project)
