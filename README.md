@@ -16,12 +16,13 @@ Developed with help of AI for test intentions, with SRE principles in mind: modu
 ## **Project Structure**
 
 weatherbot/  
-├── main.py             \# Bot's core logic, handlers, commands.  
-├── config.py           \# All settings.  
-├── weather\_service.py  \# API calls and parsing.  
-├── utils.py            \# Helper functions.  
-├── requirements.txt    \# Python dependencies.  
-└── .env.example        \# Env var template.
+├── main.py             # Bot's core logic, Discord event handlers, and command registration.
+├── config.py           # Centralized configurable settings for the bot and external APIs.
+├── weather_service.py  # Handles all Open-Meteo API calls and initial data parsing.
+├── utils.py            # Contains general utility functions (e.g., timestamp formatting).
+├── requirements.txt    # Lists all Python package dependencies.
+├── .env.example        # Template file for environment variables (sensitive data).
+└── .gitignore          # Specifies files and directories to be ignored by Git (e.g., virtual environment, .env).
 
 ## **Setup Guide**
 
