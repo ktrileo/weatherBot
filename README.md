@@ -1,4 +1,4 @@
-# **Discord Weather Bot 🤖☀️**
+# **Warsaw Weather Bot 🤖☀️**
 
 A Discord bot providing current weather and daily forecasts for Warsaw, Poland, via the Open-Meteo API. Built for clarity and operational readiness.
 Developed with help of AI for test intentions, with SRE principles in mind: modularity, centralized config, robust logging, error handling, and efficient API interaction.  
