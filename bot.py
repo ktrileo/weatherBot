@@ -11,17 +11,17 @@ import datetime
 import pytz
 
 # Setup the Open-Meteo API client with cache and retry on error
-cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
+cache_session = requests_cache.CachedSession('.cache', expire_after = 300)
 retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
 openmeteo = openmeteo_requests.Client(session = retry_session)
 
 load_dotenv()
 
 intents = discord.Intents.default()
+intents.message_content = True
 
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD_NAME')
-
 
 client = discord.Client(intents=intents)
 
@@ -32,23 +32,22 @@ async def on_ready():
             break
 
     print(
-        f'{client.user} has connected to the following guild!\n'
+        f'{client.user} has connected!\n'
         f'{guild.name} (id: {guild.id})'
         )
     
-    members = '\n - '.join([member.name for member in guild.members])
-    print(f'Guild Members:\n - {members}')
-
 @client.event
 async def on_message(message):
     if message.author == client.user:
         return
-    if message.content == "hello":
-        await message.channel.send("hello asshole")
+    if message.content.startswith("hello bot" or "Hello bot"):
+        await message.channel.send("Hello asshole")
 
     warsaw_tz = pytz.timezone('Europe/Warsaw')
+    api_call_count = 0
 
-    if message.content == "!weather":
+    if message.content.startswith("!weather"):
+        print(f"--- API Call Made ---")
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
             "latitude": 52.2298,
@@ -83,7 +82,7 @@ async def on_message(message):
         daily_precipitation_probability_max = daily.Variables(2).ValuesAsNumpy()[0]
         daily_daylight_duration = daily.Variables(3).ValuesAsNumpy()[0]
 
-            # Convert daylight_duration from seconds to hours and minutes
+        # Convert daylight_duration from seconds to hours and minutes
         daylight_hours = int(daily_daylight_duration // 3600)
         daylight_minutes = int((daily_daylight_duration % 3600) // 60)
 
@@ -104,9 +103,6 @@ async def on_message(message):
             f"  💦 Precip. Prob: {daily_precipitation_probability_max}%\n"
             f"  🌅 Daylight: {daylight_hours}h {daylight_minutes}m\n"
         )
-        count = 0
-        count += 1
-        print("Times called: {}".format(count))
         await message.channel.send(weather_output)
 
 client.run(TOKEN)
