@@ -76,30 +76,6 @@ async def on_ready():
         logger.warning(f'Bot is not connected to a guild named: "{GUILD_NAME}". Check GUILD_NAME in .env.')
         logger.info(f'Connected to the following guilds: {[g.name for g in bot.guilds]}')
 
-
-@bot.event
-async def on_message(message: discord.Message):
-    """
-    Called every time a message is sent. Handles messages not covered by commands.
-    If using commands.Bot, this is also crucial for processing commands.
-    """
-    if message.author == bot.user:
-        return
-
-    # Determine channel name for logging based on channel type
-    channel_name_for_log = message.channel.name if isinstance(message.channel, discord.TextChannel) else "DM"
-    guild_name_for_log = message.guild.name if message.guild else "DM"
-
-    logger.info(f"Message from {message.author} in #{channel_name_for_log} (Guild: {guild_name_for_log}): {message.content}")
-
-    #logger.info(f"Message from {message.author} in #{message.channel.name} (Guild: {message.guild.name if message.guild else 'DM'}): {message.content}")
-
-    # Process commands defined with @bot.command() decorators
-    # This line is vital if you define on_message and use commands.Bot
-    await bot.process_commands(message)
-
-# --- Discord Commands ---
-
 @bot.command(name='weather')
 async def get_weather(ctx: commands.Context):
     """
@@ -118,23 +94,21 @@ async def get_weather(ctx: commands.Context):
         # Extract and format data
         current_temp = weather_data['current']['temperature_2m']
         current_humidity = weather_data['current']['relative_humidity_2m']
-        current_precipitation = weather_data['current']['precipitation']
-        current_rain = weather_data['current']['rain']
-        current_showers = weather_data['current']['showers']
-        current_snowfall = weather_data['current']['snowfall']
-
-        formatted_current_time = format_unix_timestamp(
-            weather_data['current']['time'],
-            timezone_str=config.DISPLAY_TIMEZONE
-        )
+        current_weather_code = weather_data['current']['weather_code']
 
         daily_max_temp = weather_data['daily']['temperature_2m_max']
         daily_min_temp = weather_data['daily']['temperature_2m_min']
         daily_precip_prob = weather_data['daily']['precipitation_probability_max']
         daily_daylight_duration_sec = weather_data['daily']['daylight_duration']
+        daily_weather_code = weather_data['daily']['weather_code']
 
         daylight_hours = int(daily_daylight_duration_sec // 3600)
         daylight_minutes = int((daily_daylight_duration_sec % 3600) // 60)
+
+        formatted_current_time = format_unix_timestamp(
+            weather_data['current']['time'],
+            timezone_str=config.DISPLAY_TIMEZONE
+        )
 
         # Construct the human-readable output message
         weather_output = (
@@ -143,15 +117,13 @@ async def get_weather(ctx: commands.Context):
             f"**☁️ Current Conditions:**\n"
             f"  🌡️ Temperature: {current_temp:.1f}°C\n"
             f"  💧 Relative Humidity: {current_humidity:.0f}%\n"
-            f"  🌧️ Precipitation (1h): {current_precipitation:.1f} mm\n"
-            f"  ☔ Rain (1h): {current_rain:.1f} mm\n"
-            f"  🚿 Showers (1h): {current_showers:.1f} mm\n"
-            f"  ❄️ Snowfall (1h): {current_snowfall:.1f} cm\n\n"
+            f"  ❄️ Weather Code: {current_weather_code}\n\n"
             f"**☀️ Today's Forecast:**\n"
             f"  ⬆️ Max Temp: {daily_max_temp:.1f}°C\n"
             f"  ⬇️ Min Temp: {daily_min_temp:.1f}°C\n"
             f"  💦 Precip. Prob: {daily_precip_prob:.0f}%\n"
             f"  🌅 Daylight: {daylight_hours}h {daylight_minutes}m\n"
+            f"  🌅 Weather Code: {daily_weather_code}\n"
         )
 
         # Send the message to the command channel

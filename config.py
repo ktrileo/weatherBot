@@ -24,21 +24,20 @@ DISPLAY_TIMEZONE = "Europe/Warsaw"
 CURRENT_WEATHER_VARIABLES = [
     "temperature_2m",
     "relative_humidity_2m",
-    "precipitation",
-    "rain",
-    "showers",
-    "snowfall"
+    "weather_code",
+
 ]
 
 DAILY_WEATHER_VARIABLES = [
     "temperature_2m_max",
     "temperature_2m_min",
     "precipitation_probability_max",
-    "daylight_duration"
+    "daylight_duration",
+    "weather_code"
 ]
 
 # Number of forecast days to request (1 for today's forecast)
-FORECAST_DAYS = 1
+FORECAST_DAYS = 2
 
 # Time format for API response (unixtime is good for programmatic handling)
 TIME_FORMAT = "unixtime"

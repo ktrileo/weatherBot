@@ -121,7 +121,7 @@ class WeatherService:
             return {
                 'current': current_data,
                 'daily': daily_data
-            }
+                }
 
         except Exception as e:
             # Log the full traceback for detailed error analysis in SRE context
