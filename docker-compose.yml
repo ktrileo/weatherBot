@@ -1,0 +1,30 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  weather-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # THIS IS THE CRUCIAL PART FOR CROSS-ARCHITECTURE BUILDS
+      platforms:
+        - linux/amd64 # Specify the target architecture for the build
+        - linux/arm64 # Specify the target architecture for the build
+    
+    image: ktrileo/weather-bot:1.2 # <--- TAG IT CLEARLY!
+    # Or, if you use a specific registry:
+
+    container_name: weather-bot-container
+    restart: unless-stopped
+    env_file:
+      - .env
+
+    # If your bot needed to expose a web interface or API (unlikely for Discord bot):
+    # ports:
+    #   - "8080:8080"
+
+    # If your bot needed access to local files for logs or config, uncomment and adjust:
+    # volumes:
+    #   - ./data:/app/data
+
+    tty: true # Optional: keeps stdin open, useful for interactive sessions/debugging

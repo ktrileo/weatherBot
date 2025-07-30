@@ -2,9 +2,8 @@
 
 # --- Stage 1: Build Stage ---
 # Use an official Python runtime as a parent image.
-# We choose a specific version (e.g., 3.9-slim-buster or 3.10-slim-bullseye)
 # for stability and smaller image size. 'slim' images are highly recommended for production.
-FROM python:3.13-slim-bullseye as builder
+FROM python:3.13-slim-bullseye AS builder
 
 # Set the working directory in the container
 WORKDIR /app

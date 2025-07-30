@@ -1,0 +1,56 @@
+# Standard .dockerignore file
+# Python bytecode files and cache directories
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# Dependency management files that are recreated in the container
+# (If you copy requirements.txt and run pip install, you don't need these locally)
+Pipfile.lock # If using Pipenv, you might want to include this if it dictates exact deps
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Editor/IDE specific files
+.vscode/        # VS Code settings
+.idea/          # PyCharm/IntelliJ IDEA settings
+*.sublime-project
+*.sublime-workspace
+.DS_Store       # macOS specific files
+Thumbs.db       # Windows specific files
+
+# Version control
+.git/           # Git repository data
+.gitignore
+.gitattributes
+.hg/            # Mercurial
+.svn/           # Subversion
+
+# Logs and temporary files
+*.log
+tmp/
+*.tmp
+*.bak
+*.swp           # Vim swap files
+
+# Environment files (CRUCIAL for security)
+.env            # Contains local environment variables/secrets
+.env.* # e.g., .env.development, .env.local
+
+# Build artifacts (if not part of the final image)
+build/
+dist/
+*.egg-info/
+htmlcov/        # Coverage reports
+.coverage
+.tox/           # Tox virtual environments for testing
+.pytest_cache/  # Pytest cache
+
+# Docker-specific files that are not needed inside the image
+Dockerfile
+docker-compose.yml
+.dockerignore
