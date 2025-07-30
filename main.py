@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import config
 from weather_service import WeatherService
 from utils import format_unix_timestamp
+from utils import format_weather_code
 
 # --- Configure Logging ---
 logging.basicConfig(
@@ -96,6 +97,7 @@ async def get_weather(ctx: commands.Context):
         current_humidity = weather_data['current']['relative_humidity_2m']
         current_weather_code = weather_data['current']['weather_code']
 
+        # Accessing the first element of 'daily' lists for forecast data
         daily_max_temp = weather_data['daily']['temperature_2m_max']
         daily_min_temp = weather_data['daily']['temperature_2m_min']
         daily_precip_prob = weather_data['daily']['precipitation_probability_max']
@@ -105,25 +107,47 @@ async def get_weather(ctx: commands.Context):
         daylight_hours = int(daily_daylight_duration_sec // 3600)
         daylight_minutes = int((daily_daylight_duration_sec % 3600) // 60)
 
+        # Extract and format tomorrow's data (index 1)
+        tomorrow_max_temp = weather_data['tomorrow']['temperature_2m_max']
+        tomorrow_min_temp = weather_data['tomorrow']['temperature_2m_min']
+        tomorrow_precip_prob = weather_data['tomorrow']['precipitation_probability_max']
+        tomorrow_daylight_duration_sec = weather_data['tomorrow']['daylight_duration']
+        tomorrow_weather_code = weather_data['tomorrow']['weather_code']
+
+        tomorrow_daylight_hours = int(tomorrow_daylight_duration_sec // 3600)
+        tomorrow_daylight_minutes = int((tomorrow_daylight_duration_sec % 3600) // 60)
+
+
         formatted_current_time = format_unix_timestamp(
             weather_data['current']['time'],
             timezone_str=config.DISPLAY_TIMEZONE
         )
 
-        # Construct the human-readable output message
+        formatted_weather_code_current = format_weather_code(current_weather_code)
+        formatted_weather_code_daily = format_weather_code(daily_weather_code)
+        formatted_weather_code_tomorrow = format_weather_code(tomorrow_weather_code)
+
+        # Construct the human-readable output message (small and informative)
         weather_output = (
             f"📍 **Weather in Warsaw, Poland**\n"
             f"🗓️ **As of:** {formatted_current_time}\n\n"
-            f"**☁️ Current Conditions:**\n"
-            f"  🌡️ Temperature: {current_temp:.1f}°C\n"
-            f"  💧 Relative Humidity: {current_humidity:.0f}%\n"
-            f"  ❄️ Weather Code: {current_weather_code}\n\n"
-            f"**☀️ Today's Forecast:**\n"
+            f"**Current Conditions:**\n"
+            f"  🌡️ Temp: {current_temp:.1f}°C\n"
+            f"  💧 Humidity: {current_humidity:.0f}%\n"
+            f"  ☁️ Conditions: {formatted_weather_code_current}\n\n"
+            f"**Today's Forecast:**\n"
             f"  ⬆️ Max Temp: {daily_max_temp:.1f}°C\n"
             f"  ⬇️ Min Temp: {daily_min_temp:.1f}°C\n"
-            f"  💦 Precip. Prob: {daily_precip_prob:.0f}%\n"
-            f"  🌅 Daylight: {daylight_hours}h {daylight_minutes}m\n"
-            f"  🌅 Weather Code: {daily_weather_code}\n"
+            f"  ☔ Precip. Prob: {daily_precip_prob:.0f}%\n"
+            f"  ☀️ Daylight: {daylight_hours}h {daylight_minutes}m\n"
+            f"  🌦️ Conditions: {formatted_weather_code_daily}\n\n" # Added an extra newline here
+
+            f"**🗓️ Tomorrow's Forecast:**\n" # New section header
+            f"  ⬆️ Max Temp: {tomorrow_max_temp:.1f}°C\n"
+            f"  ⬇️ Min Temp: {tomorrow_min_temp:.1f}°C\n"
+            f"  ☔ Precip. Prob: {tomorrow_precip_prob:.0f}%\n"
+            f"  ☀️ Daylight: {tomorrow_daylight_hours}h {tomorrow_daylight_minutes}m\n"
+            f"  🌦️ Conditions: {formatted_weather_code_tomorrow}\n"
         )
 
         # Send the message to the command channel
@@ -131,6 +155,7 @@ async def get_weather(ctx: commands.Context):
         # Determine channel name for logging based on channel type
         ctx_channel_name_for_log = ctx.channel.name if isinstance(ctx.channel, discord.TextChannel) else "DM"
         logger.info(f"Weather forecast sent to channel: {ctx_channel_name_for_log} (ID: {ctx.channel.id})")
+
         
         # Send the message to the command channel
         #await ctx.send(weather_output)

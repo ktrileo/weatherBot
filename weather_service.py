@@ -116,11 +116,27 @@ class WeatherService:
                 except IndexError:
                     logger.error(f"Daily variable '{var_name}' at index {i} not found in API response. Check config.DAILY_WEATHER_VARIABLES order.")
                     daily_data[var_name] = None # Assign None or a default value if not found
+            
+            # --- Extract Tomorrow's Data ---
+            tmorrow_data = {}
+            tmorrow_raw = response.Daily()
+            # Daily time is usually the start of the day in Unix timestamp
+            tmorrow_data['time'] = tmorrow_raw.Time()
+
+            # Dynamically extract daily variables based on config.DAILY_WEATHER_VARIABLES
+            for i, var_name in enumerate(config.DAILY_WEATHER_VARIABLES):
+                try:
+                    # ValuesAsNumpy() returns a NumPy array; [0] extracts the scalar value for forecast_days=1
+                    tmorrow_data[var_name] = tmorrow_raw.Variables(i).ValuesAsNumpy()[1]
+                except IndexError:
+                    logger.error(f"Tomorrow variable '{var_name}' at index {i} not found in API response. Check config.DAILY_WEATHER_VARIABLES order.")
+                    tmorrow_data[var_name] = None # Assign None or a default value if not found
 
             logger.info("Successfully fetched and parsed weather data.")
             return {
                 'current': current_data,
-                'daily': daily_data
+                'daily': daily_data,
+                'tomorrow' : tmorrow_data
                 }
 
         except Exception as e:
