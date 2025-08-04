@@ -14,7 +14,7 @@ Developed with help of AI for test intentions, with SRE principles in mind: modu
 * **Logging:** Provides operational insights.
 
 ## **Project Structure**
-
+```
 weatherbot/  
 ├── main.py             # Bot's core logic, Discord event handlers, and command registration.
 ├── config.py           # Centralized configurable settings for the bot and external APIs.
@@ -23,7 +23,7 @@ weatherbot/
 ├── requirements.txt    # Lists all Python package dependencies.
 ├── .env.example        # Template file for environment variables (sensitive data).
 └── .gitignore          # Specifies files and directories to be ignored by Git (e.g., virtual environment, .env).
-
+```
 ## **Setup Guide**
 
 ### **Prerequisites**
