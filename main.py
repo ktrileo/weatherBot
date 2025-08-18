@@ -92,6 +92,9 @@ async def get_weather(ctx: commands.Context):
         # Fetch weather data using the dedicated service
         weather_data = await weather_service.fetch_weather_data()
 
+        # Fetch container name serving the bot instance
+        container_name = os.environ.get('HOSTNAME')
+
         # Extract and format data
         current_temp = weather_data['current']['temperature_2m']
         current_humidity = weather_data['current']['relative_humidity_2m']
@@ -129,25 +132,15 @@ async def get_weather(ctx: commands.Context):
 
         # Construct the human-readable output message (small and informative)
         weather_output = (
-            f"📍 **Weather in Warsaw, Poland**\n"
-            f"🗓️ **As of:** {formatted_current_time}\n\n"
-            f"**Current Conditions:**\n"
-            f"  🌡️ Temp: {current_temp:.1f}°C\n"
-            f"  💧 Humidity: {current_humidity:.0f}%\n"
-            f"  ☁️ Conditions: {formatted_weather_code_current}\n\n"
-            f"**Today's Forecast:**\n"
-            f"  ⬆️ Max Temp: {daily_max_temp:.1f}°C\n"
-            f"  ⬇️ Min Temp: {daily_min_temp:.1f}°C\n"
-            f"  ☔ Precip. Prob: {daily_precip_prob:.0f}%\n"
-            f"  ☀️ Daylight: {daylight_hours}h {daylight_minutes}m\n"
-            f"  🌦️ Conditions: {formatted_weather_code_daily}\n\n" # Added an extra newline here
-
-            f"**🗓️ Tomorrow's Forecast:**\n" # New section header
-            f"  ⬆️ Max Temp: {tomorrow_max_temp:.1f}°C\n"
-            f"  ⬇️ Min Temp: {tomorrow_min_temp:.1f}°C\n"
-            f"  ☔ Precip. Prob: {tomorrow_precip_prob:.0f}%\n"
-            f"  ☀️ Daylight: {tomorrow_daylight_hours}h {tomorrow_daylight_minutes}m\n"
-            f"  🌦️ Conditions: {formatted_weather_code_tomorrow}\n"
+            f"📍 **Warsaw, Poland** | 🗓️ **{formatted_current_time}**\n\n"
+            f"**Current:** {formatted_weather_code_current} | 🌡️ **Temp:** {current_temp:.1f}°C, 💧 **Humidity:** {current_humidity:.0f}%\n\n"
+            f"**Today's Forecast:** {formatted_weather_code_daily}\n"
+            f"⬆️/⬇️ **Temp:** {daily_max_temp:.1f}°C/{daily_min_temp:.1f}°C\n"
+            f"☔ **Precip. Prob:** {daily_precip_prob:.0f}% | ☀️ **Daylight:** {daylight_hours}h {daylight_minutes}m\n\n"
+            f"**Tomorrow's Forecast:** {formatted_weather_code_tomorrow}\n"
+            f"⬆️/⬇️ **Temp:** {tomorrow_max_temp:.1f}°C/{tomorrow_min_temp:.1f}°C\n"
+            f"☔ **Precip. Prob:** {tomorrow_precip_prob:.0f}% | ☀️ **Daylight:** {tomorrow_daylight_hours}h {tomorrow_daylight_minutes}m\n\n"
+            f"`Served by: {container_name}`"
         )
 
         # Send the message to the command channel
