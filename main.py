@@ -83,10 +83,10 @@ async def get_weather(ctx: commands.Context):
     Fetches and displays current weather and today's forecast for Warsaw, Poland.
     Usage: !weather
     """
-    global api_call_count
-    api_call_count += 1 # Increment counter for each API call attempt
+    # global api_call_count
+    # api_call_count += 1 # Increment counter for each API call attempt
 
-    logger.info(f"'{ctx.author}' requested weather. API call count: {api_call_count}")
+    # logger.info(f"'{ctx.author}' requested weather. API call count: {api_call_count}")
 
     try:
         # Fetch weather data using the dedicated service
@@ -158,14 +158,14 @@ async def get_weather(ctx: commands.Context):
         logger.exception(f"An error occurred while fetching or processing weather data for '{ctx.author}':")
         await ctx.send(f"An error occurred while fetching weather data. Please try again later. Error: `{e}`")
 
-@bot.command(name='apicount')
-async def show_api_count(ctx: commands.Context):
-    """
-    Displays the current count of API calls made by the bot.
-    Usage: !apicount
-    """
-    await ctx.send(f"The weather API has been called `{api_call_count}` times since the bot started.")
-    logger.info(f"'{ctx.author}' requested API call count: {api_call_count}")
+# @bot.command(name='apicount')
+# async def show_api_count(ctx: commands.Context):
+#     """
+#     Displays the current count of API calls made by the bot.
+#     Usage: !apicount
+#     """
+#     await ctx.send(f"The weather API has been called `{api_call_count}` times since the bot started.")
+#     logger.info(f"'{ctx.author}' requested API call count: {api_call_count}")
 
 # --- Run the Bot ---
 if __name__ == "__main__":
