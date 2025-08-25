@@ -62,7 +62,7 @@ api_call_count: int = 0
 @bot.event
 async def on_ready():
     """Called when the bot successfully connects to Discord."""
-    logger.info(f'{bot.user} has connected to Discord! (ID: {bot.user.id})')
+    logger.info(f'{bot.user} has connected to Discord! (ID: {bot.user.id})') # type: ignore
     logger.info(f'Bot is ready to receive commands with prefix: "{config.COMMAND_PREFIX}"')
 
     target_guild: discord.Guild | None = None
