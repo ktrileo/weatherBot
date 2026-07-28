@@ -1,30 +1,48 @@
-# docker-compose.yml
-version: '3.8'
-
 services:
-  weather-bot:
+  weather-bot-1:
     build:
       context: .
       dockerfile: Dockerfile
-      # THIS IS THE CRUCIAL PART FOR CROSS-ARCHITECTURE BUILDS
       platforms:
-        - linux/amd64 # Specify the target architecture for the build
-        - linux/arm64 # Specify the target architecture for the build
+        - linux/amd64
+        - linux/arm64
     
-    image: ktrileo/weather-bot:1.2 # <--- TAG IT CLEARLY!
-    # Or, if you use a specific registry:
-
-    container_name: weather-bot-container
+    image: ktrileo/weather-bot:1.9898
+    container_name: weatherbot1
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - HOSTNAME=sheoldred  # Use CONTAINER_NAME as discussed
+      - CONTAINER_NAME=sheoldred
+    networks:
+      - common_network
+  
+  weather-bot-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    
+    image: ktrileo/weather-bot:1.9898
+    container_name: weatherbot2
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - HOSTNAME=eleshnorn # Use CONTAINER_NAME
+      - CONTAINER_NAME=eleshnorn
+    networks:
+      - common_network
 
-    # If your bot needed to expose a web interface or API (unlikely for Discord bot):
-    # ports:
-    #   - "8080:8080"
+  redis:
+    image: redis:alpine
+    container_name: redis-server
+    networks:
+      - common_network
 
-    # If your bot needed access to local files for logs or config, uncomment and adjust:
-    # volumes:
-    #   - ./data:/app/data
-
-    tty: true # Optional: keeps stdin open, useful for interactive sessions/debugging
+networks:
+  common_network:
+    driver: bridge
