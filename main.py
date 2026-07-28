@@ -119,14 +119,16 @@ async def get_weather(ctx: commands.Context):
 
         # Construct the human-readable output message (small and informative)
         weather_output = (
-            f"📍 **Warsaw, Poland** | 🗓️ **{formatted_current_time}**\n\n"
+            f"========================================\n"
+            f"📍 **Barcelona, Spain** | 🗓️ **{formatted_current_time}**\n\n"
             f"**Current:** {formatted_weather_code_current} | 🌡️ **Temp:** {current_temp:.1f}°C, 💧 **Humidity:** {current_humidity:.0f}%\n\n"
             f"**Today's Forecast:** {formatted_weather_code_daily}\n"
             f"⬆️/⬇️ **Temp:** {daily_max_temp:.1f}°C/{daily_min_temp:.1f}°C\n"
             f"☔ **Precip. Prob:** {daily_precip_prob:.0f}% | ☀️ **Daylight:** {daylight_hours}h {daylight_minutes}m\n\n"
             f"**Tomorrow's Forecast:** {formatted_weather_code_tomorrow}\n"
             f"⬆️/⬇️ **Temp:** {tomorrow_max_temp:.1f}°C/{tomorrow_min_temp:.1f}°C\n"
-            f"☔ **Precip. Prob:** {tomorrow_precip_prob:.0f}% | ☀️ **Daylight:** {tomorrow_daylight_hours}h {tomorrow_daylight_minutes}m\n\n"
+            f"☔ **Precip. Prob:** {tomorrow_precip_prob:.0f}% | ☀️ **Daylight:** {tomorrow_daylight_hours}h {tomorrow_daylight_minutes}m\n"
+            f"========================================\n"
             )
 
         # Send the message to the command channel

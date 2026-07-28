@@ -7,8 +7,8 @@ COMMAND_PREFIX = '!' # The prefix for bot commands (e.g., !weather)
 OPENMETEO_API_URL = "https://api.open-meteo.com/v1/forecast"
 
 # Default geographical coordinates for weather forecasts (Used location: Warsaw, Poland)
-DEFAULT_LATITUDE = 52.2298
-DEFAULT_LONGITUDE = 21.0118
+DEFAULT_LATITUDE = 41.3888 #52.2298
+DEFAULT_LONGITUDE = 2.1590 #21.0118
 
 # Timezone used for the Open-Meteo API request (IANA format).
 # Europe/Berlin covers Warsaw for API requests.
@@ -25,7 +25,6 @@ CURRENT_WEATHER_VARIABLES = [
     "temperature_2m",
     "relative_humidity_2m",
     "weather_code",
-
 ]
 
 DAILY_WEATHER_VARIABLES = [
