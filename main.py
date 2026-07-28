@@ -2,11 +2,7 @@
 import os
 import sys
 import logging
-import redis
-import threading
 import discord
-import time
-import random
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -57,59 +53,7 @@ weather_service = WeatherService(
     timezone=config.OPENMETEO_API_TIMEZONE
 )
 
-# --- Leader Election Setup ---
-# Get container name from environment variable
-# Use CONTAINER_NAME as discussed, or default to HOSTNAME if not set
-container_name = os.environ.get('CONTAINER_NAME', os.environ.get('HOSTNAME'))
-
-# Connect to Redis
-# The 'host' is the service name from docker-compose.yml
-r = redis.Redis(host='redis-server', port=6379, db=0)
-
-# Leader Election variables
-lock_key = 'discord-bot-leader-lock'
-lock_timeout = 10  # in seconds
-is_leader = False
-
-# Function to acquire and renew the leader lock
-# Function to acquire and manage the leader lock
-# Function to acquire and manage the leader lock
-def acquire_leader_lock():
-    global is_leader
-    while True:
-        # Try to acquire the lock
-        if r.set(lock_key, container_name, nx=True, ex=lock_timeout):
-            # This instance successfully acquired the lock
-            is_leader = True
-            logger.info(f"✨ {container_name} is the new leader.")
-            
-            # The leader now simply waits until the lock expires naturally.
-            # No need to delete it. The TTL handles the rotation.
-            time.sleep(lock_timeout)
-            
-            # After the sleep, the lock will have expired naturally.
-            is_leader = False
-            logger.info(f"🔒 {container_name} leadership expired.")
-
-        else:
-            # This instance failed to acquire the lock and is a follower
-            is_leader = False
-            try:
-                current_leader = r.get(lock_key)
-                if current_leader:
-                    logger.info(f"🤖 {container_name} is a follower. Current leader: {current_leader.decode('utf-8')}")
-                else:
-                    logger.info(f"⏳ {container_name} is a follower. No active leader, trying again...")
-            except (redis.exceptions.ConnectionError, AttributeError):
-                logger.warning(f"⚠️ Redis connection lost. Retrying.")
-            
-            # Wait with a random delay before trying to acquire the lock again
-            # This is the key to preventing the same instance from always winning
-            jitter = random.uniform(0.1, 1.0) # A random delay between 0.1 and 1.0 seconds
-            time.sleep(1 + jitter)
-
 # --- Discord Event Handlers ---
-
 @bot.event
 async def on_ready():
     """Called when the bot successfully connects to Discord."""
@@ -129,19 +73,8 @@ async def on_ready():
         logger.warning(f'Bot is not connected to a guild named: "{GUILD_NAME}". Check GUILD_NAME in .env.')
         logger.info(f'Connected to the following guilds: {[g.name for g in bot.guilds]}')
 
-
-
 @bot.command(name='weather')
 async def get_weather(ctx: commands.Context):
-    """
-    Fetches and displays current weather and today's forecast for Warsaw, Poland.
-    Usage: !weather
-    """
-    global is_leader
-    if not is_leader:
-        logger.info(f"Command '{ctx.command.name}' received but this instance is not the leader. Ignoring.")
-        return  # Ignore the command if this instance is not the leader
-
     try:
         # Fetch weather data using the dedicated service
         weather_data = await weather_service.fetch_weather_data()
@@ -194,20 +127,15 @@ async def get_weather(ctx: commands.Context):
             f"**Tomorrow's Forecast:** {formatted_weather_code_tomorrow}\n"
             f"⬆️/⬇️ **Temp:** {tomorrow_max_temp:.1f}°C/{tomorrow_min_temp:.1f}°C\n"
             f"☔ **Precip. Prob:** {tomorrow_precip_prob:.0f}% | ☀️ **Daylight:** {tomorrow_daylight_hours}h {tomorrow_daylight_minutes}m\n\n"
-            f"`Served by: {container_name}`"
-        )
+            )
 
         # Send the message to the command channel
         await ctx.send(weather_output)
+
         # Determine channel name for logging based on channel type
         ctx_channel_name_for_log = ctx.channel.name if isinstance(ctx.channel, discord.TextChannel) else "DM"
         logger.info(f"Weather forecast sent to channel: {ctx_channel_name_for_log} (ID: {ctx.channel.id})")
-
         
-        # Send the message to the command channel
-        #await ctx.send(weather_output)
-        #logger.info(f"Weather forecast sent to channel: {ctx.channel.name} (ID: {ctx.channel.id})")
-
     except Exception as e:
         logger.exception(f"An error occurred while fetching or processing weather data for '{ctx.author}':")
         await ctx.send(f"An error occurred while fetching weather data. Please try again later. Error: `{e}`")
@@ -215,10 +143,6 @@ async def get_weather(ctx: commands.Context):
 # --- Run the Bot ---
 if __name__ == "__main__":
     logger.info("Starting Discord bot...")
-    
-    lock_thread = threading.Thread(target=acquire_leader_lock)
-    lock_thread.daemon = True  # Allows the program to exit even if this thread is running
-    lock_thread.start()
 
     try:
         bot.run(TOKEN)
