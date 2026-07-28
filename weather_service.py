@@ -41,7 +41,7 @@ class WeatherService:
             backoff_factor=config.RETRY_BACKOFF_FACTOR
         )
         # Initialize the Open-Meteo client with the configured session
-        self.client = openmeteo_requests.Client(session=retry_session)
+        self.client = openmeteo_requests.Client(session=retry_session) # type: ignore
         logger.info(f"WeatherService initialized for Lat: {latitude}, Lon: {longitude}, Timezone: {timezone}")
 
     async def fetch_weather_data(self) -> dict:
