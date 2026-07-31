@@ -1,5 +1,5 @@
 services:
-  weather-bot-1:
+  weather-bot:
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,38 +8,13 @@ services:
         - linux/arm64
     
     image: ktrileo/weather-bot:1.9898
-    container_name: weatherbot1
+    container_name: weatherbot
     restart: unless-stopped
     env_file:
       - .env
     environment:
       - HOSTNAME=sheoldred  # Use CONTAINER_NAME as discussed
       - CONTAINER_NAME=sheoldred
-    networks:
-      - common_network
-  
-  weather-bot-2:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    
-    image: ktrileo/weather-bot:1.9898
-    container_name: weatherbot2
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - HOSTNAME=eleshnorn # Use CONTAINER_NAME
-      - CONTAINER_NAME=eleshnorn
-    networks:
-      - common_network
-
-  redis:
-    image: redis:alpine
-    container_name: redis-server
     networks:
       - common_network
 
