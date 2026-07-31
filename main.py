@@ -1,155 +1,209 @@
-# weatherbot/main.py
 import os
 import sys
 import logging
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+import aiohttp
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-# Import modules from your project
-import config
-from weather_service import WeatherService
-from utils import format_unix_timestamp
-from utils import format_weather_code
-
-# --- Configure Logging ---
+# ==========================================
+# 1. LOGGING CONFIGURATION
+# ==========================================
+# This sets up the Python logging module to output formatted logs to the console.
+# It helps you monitor the bot's status and debug any issues if the API fails.
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format='%(asctime)s | %(name)s | %(levelname)s | %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
-logger = logging.getLogger('MainBot')
+logger = logging.getLogger('WeatherBot')
 
-# --- Load Environment Variables ---
-load_dotenv() # Load from .env file for local development
-
-# --- Validate Environment Variables ---
+# ==========================================
+# 2. ENVIRONMENT VARIABLES
+# ==========================================
+# load_dotenv() reads the hidden .env file in the same directory.
+# We extract the DISCORD_BOT_TOKEN securely so it's not hardcoded in the script.
+load_dotenv()
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-GUILD_NAME = os.getenv('DISCORD_GUILD_NAME')
 
 if not TOKEN:
+    # If the token is missing, the bot cannot start. Log a critical error and exit.
     logger.critical("DISCORD_BOT_TOKEN environment variable not set. Exiting.")
     sys.exit(1)
-if not GUILD_NAME:
-    logger.warning("DISCORD_GUILD_NAME environment variable not set. Bot will connect but might not find a specific guild by name.")
 
-# --- Discord Bot Intents ---
+# ==========================================
+# 3. UTILITIES & DATA MAPPING
+# ==========================================
+# Open-Meteo returns weather conditions as an integer code (e.g., 0, 61, 95).
+# This dictionary maps those raw integer codes to human-readable strings.
+WMO_CODES = {
+    0: 'Clear Sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+    45: 'Foggy', 46: 'Rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle',
+    55: 'Dense drizzle', 56: 'Light freezing drizzle', 57: 'Dense freezing drizzle',
+    61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain', 71: 'Slight snow fall',
+    73: 'Moderate snow fall', 75: 'Heavy snow fall', 77: 'Snow grains',
+    80: 'Slight rain showers', 81: 'Moderate rain showers', 82: 'Violent rain showers',
+    85: 'Slight snow showers', 86: 'Heavy snow showers', 95: 'Thunderstorms',
+    96: 'Thunderstorms with slight hail', 99: 'Thunderstorms with heavy hail'
+}
+
+def format_weather_code(code: int) -> str:
+    """Takes the raw WMO integer code and returns the readable weather description."""
+    return WMO_CODES.get(int(code), "Unknown weather code")
+
+def format_unix_timestamp(unix_timestamp: int, timezone_str: str) -> str:
+    """
+    Converts the raw Unix timestamp provided by the Open-Meteo API into a 
+    readable date and time string based on the city's specific timezone.
+    """
+    try:
+        dt = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc).astimezone(ZoneInfo(timezone_str))
+        return dt.strftime('%Y-%m-%d %H:%M %Z')
+    except Exception as e:
+        logger.error(f"Error formatting timestamp {unix_timestamp}: {e}")
+        return "Unknown Time"
+
+# ==========================================
+# 4. DISCORD BOT INITIALIZATION
+# ==========================================
+# We define the basic permissions (intents) the bot needs.
+# `message_content = True` is strictly required to read commands starting with `!`.
 intents = discord.Intents.default()
 intents.message_content = True
-intents.guilds = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- Discord Client Initialization ---
-# Using commands.Bot is generally recommended for bots with commands.
-# If you stick with discord.Client, ensure on_message handles all parsing.
-bot = commands.Bot(command_prefix=config.COMMAND_PREFIX, intents=intents)
-
-# --- Initialize Services ---
-# Pass configuration parameters to the service classes
-weather_service = WeatherService(
-    latitude=config.DEFAULT_LATITUDE,
-    longitude=config.DEFAULT_LONGITUDE,
-    timezone=config.OPENMETEO_API_TIMEZONE
-)
-
-# --- Discord Event Handlers ---
 @bot.event
 async def on_ready():
-    """Called when the bot successfully connects to Discord."""
-    # Start the background thread for leader election
-    logger.info(f'{bot.user} has connected to Discord! (ID: {bot.user.id})') # type: ignore
-    logger.info(f'Bot is ready to receive commands with prefix: "{config.COMMAND_PREFIX}"')
+    """This triggers automatically once the bot successfully logs into Discord."""
+    logger.info(f"Logged in as {bot.user} and ready to receive commands.")
 
-    target_guild: discord.Guild | None = None
-    for guild in bot.guilds:
-        if guild.name == GUILD_NAME:
-            target_guild = guild
-            break
+# ==========================================
+# 5. API FETCH FUNCTIONS
+# ==========================================
+# These functions use `aiohttp` to make asynchronous web requests. 
+# Async prevents the bot from "freezing" while waiting for the web API to respond.
 
-    if target_guild:
-        logger.info(f'Bot found target guild: {target_guild.name} (ID: {target_guild.id})')
-    else:
-        logger.warning(f'Bot is not connected to a guild named: "{GUILD_NAME}". Check GUILD_NAME in .env.')
-        logger.info(f'Connected to the following guilds: {[g.name for g in bot.guilds]}')
+async def fetch_coordinates(city: str) -> dict | None:
+    """
+    Geocoding Step: 
+    Takes a city string (e.g., "Paris") and asks the Open-Meteo Geocoding API 
+    for the exact latitude, longitude, and local timezone.
+    """
+    url = "https://geocoding-api.open-meteo.com/v1/search"
+    params = {
+        "name": city,
+        "count": 1,
+        "language": "en",
+        "format": "json"
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as response:
+            response.raise_for_status()
+            data = await response.json()
+            if "results" in data and len(data["results"]) > 0:
+                return data["results"][0]  # Return the top match
+            return None
 
-@bot.command(name='weather')
-async def get_weather(ctx: commands.Context):
+async def fetch_weather_data(lat: float, lon: float, tz: str) -> dict:
+    """
+    Weather Step: 
+    Takes the coordinates from `fetch_coordinates` and asks the Open-Meteo Forecast API
+    for the current conditions and the next two days of daily maximums/minimums.
+    """
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "current": "temperature_2m,relative_humidity_2m,weather_code",
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,daylight_duration,weather_code",
+        "timezone": tz,
+        "timeformat": "unixtime",
+        "forecast_days": 2
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as response:
+            response.raise_for_status()
+            return await response.json()
+
+# ==========================================
+# 6. DISCORD COMMAND DEFINITION
+# ==========================================
+# This registers the `!weather` command. If the user types `!weather London`, 
+# the variable `city` becomes "London". If they type `!weather`, it defaults to "Warsaw".
+
+@bot.command(name="weather", help="Get the current weather forecast")
+async def weather(ctx: commands.Context, *, city: str = "Warsaw"):
     try:
-        # Fetch weather data using the dedicated service
-        weather_data = await weather_service.fetch_weather_data()
+        # Step A: Translate the city name into coordinates
+        location = await fetch_coordinates(city)
+        if not location:
+            await ctx.send(f"❌ Could not find coordinates for `{city}`. Please check the spelling.")
+            return
 
-        # Fetch container name serving the bot instance
-        container_name = os.environ.get('HOSTNAME')
+        loc_name = location.get("name")
+        country = location.get("country", "")
+        lat = location.get("latitude")
+        lon = location.get("longitude")
+        tz_str = location.get("timezone", "UTC")
 
-        # Extract and format data
-        current_temp = weather_data['current']['temperature_2m']
-        current_humidity = weather_data['current']['relative_humidity_2m']
-        current_weather_code = weather_data['current']['weather_code']
+        # Step B: Pass those exact coordinates to get the weather data
+        data = await fetch_weather_data(lat, lon, tz_str)
 
-        # Accessing the first element of 'daily' lists for forecast data
-        daily_max_temp = weather_data['daily']['temperature_2m_max']
-        daily_min_temp = weather_data['daily']['temperature_2m_min']
-        daily_precip_prob = weather_data['daily']['precipitation_probability_max']
-        daily_daylight_duration_sec = weather_data['daily']['daylight_duration']
-        daily_weather_code = weather_data['daily']['weather_code']
+        # Step C: Extract the "Current" conditions from the JSON response
+        current = data['current']
+        curr_temp = current['temperature_2m']
+        curr_humidity = current['relative_humidity_2m']
+        curr_code = format_weather_code(current['weather_code'])
+        curr_time = format_unix_timestamp(current['time'], tz_str)
 
-        daylight_hours = int(daily_daylight_duration_sec // 3600)
-        daylight_minutes = int((daily_daylight_duration_sec % 3600) // 60)
+        # Step D: Extract the "Daily" forecast from the JSON response.
+        # The API returns daily data as lists. Index [0] is today, [1] is tomorrow.
+        daily = data['daily']
+        
+        today_max = daily['temperature_2m_max'][0]
+        today_min = daily['temperature_2m_min'][0]
+        today_precip = daily['precipitation_probability_max'][0]
+        today_code = format_weather_code(daily['weather_code'][0])
+        # Convert seconds of daylight into hours and minutes
+        today_dl_hours = int(daily['daylight_duration'][0] // 3600)
+        today_dl_mins = int((daily['daylight_duration'][0] % 3600) // 60)
 
-        # Extract and format tomorrow's data (index 1)
-        tomorrow_max_temp = weather_data['tomorrow']['temperature_2m_max']
-        tomorrow_min_temp = weather_data['tomorrow']['temperature_2m_min']
-        tomorrow_precip_prob = weather_data['tomorrow']['precipitation_probability_max']
-        tomorrow_daylight_duration_sec = weather_data['tomorrow']['daylight_duration']
-        tomorrow_weather_code = weather_data['tomorrow']['weather_code']
+        tom_max = daily['temperature_2m_max'][1]
+        tom_min = daily['temperature_2m_min'][1]
+        tom_precip = daily['precipitation_probability_max'][1]
+        tom_code = format_weather_code(daily['weather_code'][1])
+        tom_dl_hours = int(daily['daylight_duration'][1] // 3600)
+        tom_dl_mins = int((daily['daylight_duration'][1] % 3600) // 60)
 
-        tomorrow_daylight_hours = int(tomorrow_daylight_duration_sec // 3600)
-        tomorrow_daylight_minutes = int((tomorrow_daylight_duration_sec % 3600) // 60)
-
-
-        formatted_current_time = format_unix_timestamp(
-            weather_data['current']['time'],
-            timezone_str=config.DISPLAY_TIMEZONE
+        # Step E: Construct the final string to send back to Discord
+        weather_output = (
+            "========================================\n"
+            f"📍 **{loc_name}, {country}** | 🗓️ **{curr_time}**\n\n"
+            f"**Current:** {curr_code} | 🌡️ **Temp:** {curr_temp:.1f}°C, 💧 **Humidity:** {curr_humidity:.0f}%\n\n"
+            f"**Today's Forecast:** {today_code}\n"
+            f"⬆️/⬇️ **Temp:** {today_max:.1f}°C/{today_min:.1f}°C\n"
+            f"☔ **Precip. Prob:** {today_precip:.0f}% | ☀️ **Daylight:** {today_dl_hours}h {today_dl_mins}m\n\n"
+            f"**Tomorrow's Forecast:** {tom_code}\n"
+            f"⬆️/⬇️ **Temp:** {tom_max:.1f}°C/{tom_min:.1f}°C\n"
+            f"☔ **Precip. Prob:** {tom_precip:.0f}% | ☀️ **Daylight:** {tom_dl_hours}h {tom_dl_mins}m\n"
+            "========================================"
         )
 
-        formatted_weather_code_current = format_weather_code(current_weather_code)
-        formatted_weather_code_daily = format_weather_code(daily_weather_code)
-        formatted_weather_code_tomorrow = format_weather_code(tomorrow_weather_code)
-
-        # Construct the human-readable output message (small and informative)
-        weather_output = (
-            f"========================================\n"
-            f"📍 **Barcelona, Spain** | 🗓️ **{formatted_current_time}**\n\n"
-            f"**Current:** {formatted_weather_code_current} | 🌡️ **Temp:** {current_temp:.1f}°C, 💧 **Humidity:** {current_humidity:.0f}%\n\n"
-            f"**Today's Forecast:** {formatted_weather_code_daily}\n"
-            f"⬆️/⬇️ **Temp:** {daily_max_temp:.1f}°C/{daily_min_temp:.1f}°C\n"
-            f"☔ **Precip. Prob:** {daily_precip_prob:.0f}% | ☀️ **Daylight:** {daylight_hours}h {daylight_minutes}m\n\n"
-            f"**Tomorrow's Forecast:** {formatted_weather_code_tomorrow}\n"
-            f"⬆️/⬇️ **Temp:** {tomorrow_max_temp:.1f}°C/{tomorrow_min_temp:.1f}°C\n"
-            f"☔ **Precip. Prob:** {tomorrow_precip_prob:.0f}% | ☀️ **Daylight:** {tomorrow_daylight_hours}h {tomorrow_daylight_minutes}m\n"
-            f"========================================\n"
-            )
-
-        # Send the message to the command channel
+        # Step F: Send the formatted string back to the channel where the command was called
         await ctx.send(weather_output)
-
-        # Determine channel name for logging based on channel type
-        ctx_channel_name_for_log = ctx.channel.name if isinstance(ctx.channel, discord.TextChannel) else "DM"
-        logger.info(f"Weather forecast sent to channel: {ctx_channel_name_for_log} (ID: {ctx.channel.id})")
+        logger.info(f"Weather forecast for {loc_name} sent to {ctx.author.name}.")
         
     except Exception as e:
-        logger.exception(f"An error occurred while fetching or processing weather data for '{ctx.author}':")
-        await ctx.send(f"An error occurred while fetching weather data. Please try again later. Error: `{e}`")
+        # Catch any network errors or data parsing errors so the bot doesn't crash
+        logger.exception("An error occurred while fetching weather data:")
+        await ctx.send(f"❌ An error occurred while fetching weather data. Error: `{e}`")
 
-# --- Run the Bot ---
+# ==========================================
+# 7. EXECUTION
+# ==========================================
+# This block ensures the bot only runs if this file is executed directly 
+# (not imported as a module elsewhere).
 if __name__ == "__main__":
-    logger.info("Starting Discord bot...")
-
-    try:
-        bot.run(TOKEN)
-    except discord.LoginFailure:
-        logger.critical("Failed to log in. Invalid bot token provided.")
-    except Exception as e:
-        logger.critical(f"An unexpected error occurred while running the bot: {e}", exc_info=True)
-
+    bot.run(TOKEN)
