@@ -149,7 +149,7 @@ async def weather(ctx: commands.Context, *, city: str = "Warsaw"):
         tz_str = location.get("timezone", "UTC")
 
         # Step B: Pass those exact coordinates to get the weather data
-        data = await fetch_weather_data(lat, lon, tz_str)
+        data = await fetch_weather_data(lat, lon, tz_str) # type: ignore
 
         # Step C: Extract the "Current" conditions from the JSON response
         current = data['current']
