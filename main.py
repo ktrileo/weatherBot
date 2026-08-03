@@ -188,7 +188,7 @@ async def weather(ctx: commands.Context, *, city: str = "Warsaw"):
             f"**Tomorrow's Forecast:** {tom_code}\n"
             f"⬆️/⬇️ **Temp:** {tom_max:.1f}°C/{tom_min:.1f}°C\n"
             f"☔ **Precip. Prob:** {tom_precip:.0f}% | ☀️ **Daylight:** {tom_dl_hours}h {tom_dl_mins}m\n"
-            "========================================"
+            "======================================== v2"
         )
 
         # Step F: Send the formatted string back to the channel where the command was called
